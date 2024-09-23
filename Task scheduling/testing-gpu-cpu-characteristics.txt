@@ -1,0 +1,57 @@
+import setuptools
+import jetson_emulator.inference as inference
+import jetson_emulator.utils as utils
+import psutil
+import time 
+import gpustat
+import numpy as np
+import subprocess
+
+
+A = np.array([[1, 2, 3],
+              [4, 5, 6]])
+
+B = np.array([[7, 8],
+              [9, 10],
+              [11, 12]])
+
+# Perform matrix multiplication
+C = np.dot(A, B)
+
+print("Matrix A:")
+print(A)
+print("\nMatrix B:")
+print(B)
+print("\nResult of matrix multiplication (A * B):")
+print(C)
+
+print ("--------------------------CPU--------------------------")
+
+#Memory Consumption
+'''cpu_percent = psutil.cpu_percent(interval=1)
+print(f"CPU Usage: {cpu_percent}%")'''
+
+memory_usage = psutil.virtual_memory()
+print(f"Memory Usage: {memory_usage.percent}%")
+ 
+'''disk_usage = psutil.disk_usage('/')
+print(f"Disk Usage: {disk_usage.percent}%")'''
+
+#Instrutions processed
+# Get CPU times
+
+cpu_times = psutil.cpu_times()
+# Print CPU times
+print("CPU Times(Instructions processed):", cpu_times)
+
+#OOO Cycles
+
+
+print ("--------------------------GPU--------------------------")
+
+gpu_stats = gpustat.GPUStatCollection.new_query()
+for gpu in gpu_stats.gpus:
+    print(f"GPU {gpu.index}: {gpu.name}, Utilization: {gpu.utilization}%")
+
+    
+
