@@ -1,0 +1,106 @@
+import cv2
+import numpy as np
+
+
+# Load the image
+img = cv2.imread("../input/1_image.jpeg")
+assert img is not None, "Failed to load image."
+
+
+# Step 1: Convert the image to HSV for green detection
+img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+
+# Step 2: Define the range for green color in HSV
+lower_limit_green = (35, 40, 40)
+upper_limit_green = (85, 255, 255)
+
+
+# Step 3: Create a mask for the green color
+green_mask = cv2.inRange(img_hsv, lower_limit_green, upper_limit_green)
+
+
+# Save the mask for green areas
+cv2.imwrite("../out/hsv_image.jpg", green_mask)
+
+
+# Load the HSV image
+image = cv2.imread("../out/hsv_image.jpg")
+
+
+# Convert the image to grayscale
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+
+# Threshold the grayscale image to get only black colors
+_, thresh = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
+
+
+# Make sure the binary image is in the correct format
+thresh = cv2.convertScaleAbs(thresh)
+
+
+# Find contours of the objects detected
+contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+
+# Store the bounding box locations that contain circular objects
+circular_bounding_boxes = []
+
+
+# Iterate over each contour to check for circularity
+for contour in contours:
+    # Get the bounding box coordinates
+    x, y, w, h = cv2.boundingRect(contour)
+    
+    # Extract the region of interest (ROI) from the thresholded image
+    roi = thresh[y:y+h, x:x+w]
+    
+    # Find contours in the ROI
+    roi_contours, _ = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Check for circularity within the ROI contours
+    for roi_contour in roi_contours:
+        # Calculate the perimeter and area of the contour
+        perimeter = cv2.arcLength(roi_contour, True)
+        area = cv2.contourArea(roi_contour)
+        
+        # Skip small areas to avoid noise
+        if area > 0:
+            # Calculate the circularity
+            circularity = 4 * np.pi * (area / (perimeter ** 2))
+            
+            # A perfect circle has a circularity of 1
+            if 0.7 < circularity <= 1.2:  # Allow some tolerance
+                circular_bounding_boxes.append((x, y, w, h))
+                # Draw the rectangle on the original image
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 10)
+                break  # No need to check other contours within this ROI
+
+
+# Save the image with marked areas that contain circular objects
+cv2.imwrite("../out/grey_marked.jpg", image)
+
+
+# Now apply the same rectangles and labels to a different image
+different_image = cv2.imread("../input/1_image.jpeg")
+
+
+# Label each bounding box
+for i, (x, y, w, h) in enumerate(circular_bounding_boxes):
+    # Draw the rectangle on the different image
+    cv2.rectangle(different_image, (x, y), (x + w, y + h), (0, 0, 255), 10)
+    
+    # Write the label next to the rectangle
+    label = f'pot{i + 1}'
+    label_position = (x + 3, y + h + 80)
+    #label_position = (x + w + 10, y + 30)  # Adjust position as needed
+    cv2.putText(different_image, label, label_position, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
+
+# Save the modified different image with labels
+cv2.imwrite("../out/marked.jpg", different_image)
+
+
+# Print the number of detected pots
+print(f"Number of pots detected: {len(circular_bounding_boxes)}")
